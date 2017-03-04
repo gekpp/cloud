@@ -27,22 +27,48 @@
     cluster_ips: '{{ groups["cloud-node"] | map("extract", hostvars, ["ansible_"+advertise_interface.replace("-","_"), "ipv4", "address"]) | list }}'
   when: advertise_interface is defined
 
+- debug:
+    msg: "Defined: Host {{ inventory_hostname }} ({{advertise_interface is defined}}).cluster_ips = {{ cluster_ips }}"
+  when: advertise_interface is defined
+
+
+
 - set_fact:
     advertise_addr: '{{hostvars[inventory_hostname]["ansible_"+advertise_interface.replace("-","_")]["ipv4"]["address"]}}'
   when: advertise_interface is defined
+
+- debug:
+    msg: "Defined:Host {{ inventory_hostname }}.advertise_addr = {{ advertise_addr }}"
+  when: advertise_interface is defined
+
 
 
 - set_fact:
     cluster_ips: '{{ groups["cloud-node"] | map("extract", hostvars, ["ansible_default_ipv4", "address"]) | list }}'
   when: advertise_interface is undefined
 
+- debug:
+    msg: "Undefined: Host {{ inventory_hostname }}.cluster_ips = {{ cluster_ips }}"
+  when: advertise_interface is undefined
+
+
+
 - set_fact:
     advertise_addr: '{{ ansible_default_ipv4["address"] }}'
+  when: advertise_interface is undefined
+
+- debug:
+    msg: "Undefined: Host {{ inventory_hostname }}.advertise_addr = {{ advertise_addr }}"
   when: advertise_interface is undefined
 
 - set_fact:
     consul_retry_join: >
       {{ '"' + (cluster_ips | join('", "')) + '"'}}
+
+- debug:
+    msg: "Host {{ inventory_hostname }}.consul_retry_join = {{ consul_retry_join }}"
+
+
 
 
 - name: creates consul configuration file
@@ -54,6 +80,11 @@
     mode: 0755
   notify:
     - "{{ consul_restart_handler }}"
+
+
+- name: restart consul
+  action: service name=consul state=restarted enabled=yes
+  when: consul_manage_service
 
 
 - name: creates acl token for consul servers
@@ -130,3 +161,24 @@
     destination_port: 8302
     jump: ACCEPT
   with_items: '{{cluster_ips}}'
+
+  
+- name: register service docker in consul
+  consul:
+      service_name: docker
+      service_id: docker
+      service_address: '{{ hostvars[inventory_hostname]["ansible_"+advertise_interface.replace("-","_")]["ipv4"]["address"] }}'
+      service_port: 2376
+      tags: ["lb_group=primary", "im"]
+      token: '{{ consul_acl_token }}'
+  when: advertise_interface is defined
+
+- name: register service docker in consul
+  consul:
+      service_name: docker
+      service_id: docker
+      service_address: '{{ ansible_default_ipv4["address"] }}'
+      service_port: 2376
+      tags: ["lb_group=primary", "im"]
+      token: '{{ consul_acl_token }}'
+  when: advertise_interface is undefined

@@ -9,7 +9,6 @@
 - include: redhat.yml
   when: ansible_distribution == 'RedHat'
 
-
 - name: installs 'docker-py'
   pip:
     name: docker-py
@@ -86,3 +85,6 @@
     destination_port: 4789
     jump: ACCEPT
   with_items: '{{cluster_ips}}'
+  
+
+

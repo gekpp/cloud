@@ -968,6 +968,7 @@ def main():
         ssl_args['certfile'] = cfg['SSL_CERTFILE']
 
     docker_tls_config = None
+
     if docker_client_cert or docker_server_cert:
         docker_tls_config = docker.tls.TLSConfig(
             client_cert=docker_client_cert,

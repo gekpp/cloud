@@ -27,5 +27,5 @@
     name: registrator
     state: started
     pull: true
-    restart_policy: always
+    restart_policy: on-failure
     restart_retries: 3

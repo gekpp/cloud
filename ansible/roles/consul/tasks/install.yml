@@ -155,3 +155,8 @@
     owner=root
     group=root
     mode=0755
+
+- name: Install python-consul module
+  pip:
+    name: python-consul
+    state: present

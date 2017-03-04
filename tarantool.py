@@ -1520,5 +1520,5 @@ class Tarantool(group.Group):
 
         logging.info("Creating network '%s'", network_name)
         docker_obj.create_network(name=network_name,
-                                  driver='bridge',
+                                  driver='overlay',
                                   ipam=ipam_config)

@@ -73,7 +73,7 @@ class Tarantool(group.Group):
                                        token=global_env.consul_acl_token)
             kv = consul_obj.kv
 
-            create_task.log("Creating group '%s'", group_id)
+            create_task.log("Tarantool: Creating group '%s'", group_id)
 
             ip1 = ip_pool.allocate_ip()
             ip2 = ip_pool.allocate_ip()
@@ -86,6 +86,8 @@ class Tarantool(group.Group):
             kv.put('tarantool/%s/blueprint/creation_time' % group_id, creation_time)
             kv.put('tarantool/%s/blueprint/instances/1/addr' % group_id, ip1)
             kv.put('tarantool/%s/blueprint/instances/2/addr' % group_id, ip2)
+            kv.put('kassa/%s/instances/1/addr' % name, ip1)
+            kv.put('kassa/%s/instances/2/addr' % name, ip2)
 
             Sense.update()
 
@@ -97,6 +99,8 @@ class Tarantool(group.Group):
             Sense.update()
 
             create_task.log("Registering services")
+            tar.node_tags = [name]
+
             tar.register()
             Sense.update()
 
@@ -800,7 +804,7 @@ class Tarantool(group.Group):
                                                 address=addr,
                                                 port=3301,
                                                 check=replication_check,
-                                                tags=['tarantool'])
+                                                tags=['tarantool'] + self.node_tags)
 
         ret = consul_obj.agent.check.register("Memory Utilization",
                                               check=memory_check,

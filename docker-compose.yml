@@ -5,6 +5,8 @@ services:
     image: consul
     ports:
       - "8501:8500"
+      - "8601:8600"
+      - "8601:8600/udp"
     tmpfs: /tmp/consul
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

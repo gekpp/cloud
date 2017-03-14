@@ -1,6 +1,8 @@
+*.iml
 .kitchen
 *.pyc
 *.xlog
 *.snap
 .vagrant
 *.retry
+config/certs/

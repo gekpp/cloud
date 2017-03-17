@@ -73,7 +73,7 @@ class Tarantool(group.Group):
                                        token=global_env.consul_acl_token)
             kv = consul_obj.kv
 
-            create_task.log("Tarantool: Creating group '%s'", group_id)
+            create_task.log("Creating group '%s'", group_id)
 
             ip1 = ip_pool.allocate_ip()
             ip2 = ip_pool.allocate_ip()
@@ -86,8 +86,6 @@ class Tarantool(group.Group):
             kv.put('tarantool/%s/blueprint/creation_time' % group_id, creation_time)
             kv.put('tarantool/%s/blueprint/instances/1/addr' % group_id, ip1)
             kv.put('tarantool/%s/blueprint/instances/2/addr' % group_id, ip2)
-            kv.put('kassa/%s/instances/1/addr' % name, ip1)
-            kv.put('kassa/%s/instances/2/addr' % name, ip2)
 
             Sense.update()
 
@@ -99,7 +97,7 @@ class Tarantool(group.Group):
             Sense.update()
 
             create_task.log("Registering services")
-            tar.node_tags = [name]
+            tar.node_name = name
 
             tar.register()
             Sense.update()
@@ -799,12 +797,17 @@ class Tarantool(group.Group):
                      instance_id,
                      consul_host)
 
+        tags = [self.node_name]
+        # if instance_num == "1":
+        #     tags=["primary_"+self.node_name]
+        # else:
+        #     tags=[]
         ret = consul_obj.agent.service.register("tarantool",
                                                 service_id=instance_id,
                                                 address=addr,
                                                 port=3301,
                                                 check=replication_check,
-                                                tags=['tarantool'] + self.node_tags)
+                                                tags=['tarantool'] + tags)
 
         ret = consul_obj.agent.check.register("Memory Utilization",
                                               check=memory_check,
@@ -1233,8 +1236,9 @@ class Tarantool(group.Group):
             if ret['ExitCode'] != 0:
                 raise RuntimeError("Failed to update symlink to '%s'" % destdir)
 
-
+            time.sleep(10)
             docker_obj.restart(container=instance_id)
+            logging.info("Restarting container=%s" % instance_id)
         else:
             logging.info(
                 "Not setting config for container '%s', as it doesn't exist",

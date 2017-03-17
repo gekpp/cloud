@@ -1,4 +1,19 @@
-version: '2'
+version: '3'
+
+networks:
+  mynet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      -
+        subnet: 172.55.128.0/25
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+
+
 services:
   # Instances to run cloud containers
   consul1:
@@ -20,7 +35,10 @@ services:
           }]
         }
       DOCKER_HOST: unix:///var/run/docker.sock
+
     command: gosu root consul agent -data-dir=/consul/data -config-dir=/consul/config -bind=0.0.0.0 -server -bootstrap-expect=1 -ui -client 0.0.0.0
+    networks:
+    - default
 
   api:
     build: .
@@ -35,5 +53,21 @@ services:
       LISTEN_PORT: 5061
       IPALLOC_RANGE: 172.55.128.0/25
       GATEWAY_IP: 172.55.128.1
-      DOCKER_NETWORK: mynet
+      DOCKER_NETWORK: cloud_mynet
+      BACKUP_STORAGE_TYPE: filesystem
+      BACKUP_BASE_DIR: /tmp
       CREATE_NETWORK_AUTOMATICALLY: "true"
+    networks:
+    - default
+
+  nginx:
+    image: openresty/openresty:alpine
+    volumes:
+      - ./nginx/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+    links:
+      - consul1
+    ports:
+      - "8081:80"
+    networks:
+      - mynet
+      - default

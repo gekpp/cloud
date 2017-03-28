@@ -23,14 +23,17 @@ import shutil
 import os
 import yaml
 
+
 def splitext(path):
     for ext in ['.tar.gz', '.tar.bz2']:
         if path.endswith(ext):
             return path[:-len(ext)], path[-len(ext):]
     return os.path.splitext(path)
 
+
 class TarantoolTask(task.Task):
     tarantool_task_type = None
+
     def __init__(self, group_id):
         super().__init__(self.tarantool_task_type)
         self.group_id = group_id
@@ -40,11 +43,14 @@ class TarantoolTask(task.Task):
         obj['group_id'] = self.group_id
         return obj
 
+
 class CreateTask(TarantoolTask):
     tarantool_task_type = "create_tarantool"
 
+
 class UpdateTask(TarantoolTask):
     tarantool_task_type = "update_tarantool"
+
 
 class DeleteTask(TarantoolTask):
     tarantool_task_type = "delete_tarantool"
@@ -55,8 +61,9 @@ def backup_is_valid(storage, digest):
 
 
 class Tarantool(group.Group):
-    def __init__(self, consul_host, group_id):
+    def __init__(self, consul_host, group_id, application_dir=None):
         super(Tarantool, self).__init__(consul_host, group_id)
+        self.application_dir = application_dir
 
     @classmethod
     def get(cls, group_id):
@@ -65,7 +72,7 @@ class Tarantool(group.Group):
         return memc
 
     @classmethod
-    def create(cls, create_task, name, memsize, password, check_period):
+    def create(cls, create_task, name, memsize, password, check_period, application_dir):
         group_id = create_task.group_id
 
         try:
@@ -89,7 +96,7 @@ class Tarantool(group.Group):
 
             Sense.update()
 
-            tar = Tarantool(global_env.consul_host, group_id)
+            tar = Tarantool(global_env.consul_host, group_id, application_dir)
 
             create_task.log("Allocating instance to physical nodes")
 
@@ -220,7 +227,7 @@ class Tarantool(group.Group):
             update_task.log("No live containers. Can't heal.")
             raise RuntimeError("No live containers")
 
-        instance_num = str(3-int(list(containers['instances'].keys())[0]))
+        instance_num = str(3 - int(list(containers['instances'].keys())[0]))
         other_instance_num = list(containers['instances'].keys())[0]
         password = self.get_instance_password(other_instance_num)
         update_task.log("Re-creating container %s from %s",
@@ -338,7 +345,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
 
             if not docker_addr:
@@ -448,7 +455,7 @@ class Tarantool(group.Group):
                 raise RuntimeError(
                     "Failed copy code symlink: " + out.decode('utf-8'))
 
-            strm, _ = docker_obj.get_archive(instance_id, tmp_backup_dir+'/.')
+            strm, _ = docker_obj.get_archive(instance_id, tmp_backup_dir + '/.')
             archive_id, size = storage.put_archive(strm)
 
             cmd = "rm -rf /var/lib/tarantool/backup-*"
@@ -496,7 +503,7 @@ class Tarantool(group.Group):
                 docker_addr = None
                 for host in docker_hosts:
                     if host['addr'].split(':')[0] == docker_host or \
-                       host['consul_host'] == docker_host:
+                                    host['consul_host'] == docker_host:
                         docker_addr = host['addr']
 
                 if not docker_addr:
@@ -508,7 +515,7 @@ class Tarantool(group.Group):
                 if mem_used > blueprint['memsize']:
                     err = ("Backed up instance used {} MiB of RAM, but " +
                            "instance {} only has {} MiB max").format(
-                               mem_used, group_id, blueprint['memsize'])
+                        mem_used, group_id, blueprint['memsize'])
                     restore_task.set_status(task.STATUS_CRITICAL, err)
                     return
 
@@ -674,7 +681,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
 
             docker_obj = docker.Client(base_url=docker_addr,
@@ -701,7 +708,6 @@ class Tarantool(group.Group):
                 time.sleep(1)
                 attempts += 1
 
-
     def enable_replication(self):
         port = 3301
 
@@ -724,9 +730,8 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
-
 
             docker_obj = docker.Client(base_url=docker_addr,
                                        tls=global_env.docker_tls_config)
@@ -749,12 +754,11 @@ class Tarantool(group.Group):
                     break
 
                 time.sleep(1)
-                attempts+=1
+                attempts += 1
 
             if attempts >= 5:
                 raise RuntimeError("Failed to enable replication for group " +
                                    self.group_id)
-
 
     def register_instance(self, instance_num):
         blueprint = self.blueprint
@@ -766,7 +770,7 @@ class Tarantool(group.Group):
         consul_host = None
         for host in docker_hosts:
             if host['addr'].split(':')[0] == docker_host or \
-               host['consul_host'] == docker_host:
+                            host['consul_host'] == docker_host:
                 consul_host = host['consul_host']
         if not consul_host:
             raise RuntimeError("Failed to find consul host of %s" % docker_host)
@@ -832,7 +836,7 @@ class Tarantool(group.Group):
         docker_addr = None
         for host in docker_hosts:
             if host['addr'].split(':')[0] == docker_host or \
-               host['consul_host'] == docker_host:
+                            host['consul_host'] == docker_host:
                 docker_addr = host['addr']
 
         if not docker_addr:
@@ -862,7 +866,7 @@ class Tarantool(group.Group):
         consul_host = None
         for host in docker_hosts:
             if host['addr'].split(':')[0] == docker_host or \
-               host['consul_host'] == docker_host:
+                            host['consul_host'] == docker_host:
                 consul_host = host['consul_host']
         if not consul_host:
             raise RuntimeError("Failed to find consul host of %s" % docker_host)
@@ -878,7 +882,7 @@ class Tarantool(group.Group):
                 check_id = instance_id + '_memory'
                 logging.info("Unregistering check '%s'", check_id)
                 consul_obj.agent.check.deregister(check_id)
-                consul_obj.agent.check.deregister('service:'+instance_id)
+                consul_obj.agent.check.deregister('service:' + instance_id)
 
                 logging.info("Unregistering instance '%s' from '%s'",
                              instance_id,
@@ -888,7 +892,6 @@ class Tarantool(group.Group):
         else:
             logging.info("Not unregistering '%s', as it's not registered",
                          instance_id)
-
 
     def create_container(self, instance_num,
                          other_instance_num,
@@ -910,7 +913,7 @@ class Tarantool(group.Group):
         docker_addr = None
         for host in docker_hosts:
             if host['addr'].split(':')[0] == docker_host or \
-               host['consul_host'] == docker_host:
+                            host['consul_host'] == docker_host:
                 docker_addr = host['addr']
 
         if not docker_addr:
@@ -934,27 +937,35 @@ class Tarantool(group.Group):
                          " and replication source: '%s'",
                          instance_id, docker_obj.base_url, addr, replica_ip)
 
+        volumes_binds = None
+        volumes_mount_points = None
+
+        if self.application_dir:
+            volumes_binds = [self.application_dir + ":/opt/tarantool"]
+            volumes_mount_points = ["/opt/tarantool"]
+
         host_config = docker_obj.create_host_config(
-            restart_policy =
+            restart_policy=
             {
                 "MaximumRetryCount": 0,
                 "Name": "unless-stopped"
-            })
+            },
+            binds=volumes_binds)
 
         networking_config = {
             'EndpointsConfig':
-            {
-                network_name:
                 {
-                    'IPAMConfig':
-                    {
-                        "IPv4Address": addr,
-                        "IPv6Address": ""
-                    },
-                    "Links": [],
-                    "Aliases": []
+                    network_name:
+                        {
+                            'IPAMConfig':
+                                {
+                                    "IPv4Address": addr,
+                                    "IPv6Address": ""
+                                },
+                            "Links": [],
+                            "Aliases": []
+                        }
                 }
-            }
         }
 
         environment = {}
@@ -971,6 +982,7 @@ class Tarantool(group.Group):
         container = docker_obj.create_container(image='tarantool-cloud-tarantool',
                                                 name=instance_id,
                                                 command=None,
+                                                volumes=volumes_mount_points,
                                                 host_config=host_config,
                                                 networking_config=networking_config,
                                                 environment=environment,
@@ -1003,7 +1015,7 @@ class Tarantool(group.Group):
         docker_addr = None
         for host in docker_hosts:
             if host['addr'].split(':')[0] == docker_host or \
-               host['consul_host'] == docker_host:
+                            host['consul_host'] == docker_host:
                 docker_addr = host['addr']
 
         if not docker_addr:
@@ -1037,35 +1049,35 @@ class Tarantool(group.Group):
         docker_obj.remove_container(container=instance_id)
 
         host_config = docker_obj.create_host_config(
-            restart_policy =
+            restart_policy=
             {
                 "MaximumRetryCount": 0,
                 "Name": "unless-stopped"
             },
-            binds = binds
+            binds=binds
         )
 
         cmd = 'tarantool /opt/tarantool/app.lua'
 
         networking_config = {
             'EndpointsConfig':
-            {
-                network_name:
                 {
-                    'IPAMConfig':
-                    {
-                        "IPv4Address": addr,
-                        "IPv6Address": ""
-                    },
-                    "Links": [],
-                    "Aliases": []
+                    network_name:
+                        {
+                            'IPAMConfig':
+                                {
+                                    "IPv4Address": addr,
+                                    "IPv6Address": ""
+                                },
+                            "Links": [],
+                            "Aliases": []
+                        }
                 }
-            }
         }
 
         environment = {}
 
-        environment['TARANTOOL_SLAB_ALLOC_ARENA'] = float(memsize)/1024
+        environment['TARANTOOL_SLAB_ALLOC_ARENA'] = float(memsize) / 1024
 
         if replica_ip:
             environment['TARANTOOL_REPLICATION_SOURCE'] = replica_ip + ':3301'
@@ -1100,7 +1112,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)
@@ -1134,7 +1146,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)
@@ -1148,7 +1160,7 @@ class Tarantool(group.Group):
                                        tls=global_env.docker_tls_config)
 
             cmd = "tarantool_set_config.lua TARANTOOL_SLAB_ALLOC_ARENA " + \
-                  str(float(memsize)/1024)
+                  str(float(memsize) / 1024)
 
             exec_id = docker_obj.exec_create(self.group_id + '_' + instance_num,
                                              cmd)
@@ -1195,7 +1207,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)
@@ -1244,7 +1256,6 @@ class Tarantool(group.Group):
                 "Not setting config for container '%s', as it doesn't exist",
                 instance_id)
 
-
     def set_instance_password(self, instance_num, password):
         containers = self.containers
 
@@ -1262,7 +1273,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)
@@ -1307,7 +1318,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)
@@ -1355,7 +1366,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)
@@ -1396,7 +1407,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)
@@ -1437,7 +1448,7 @@ class Tarantool(group.Group):
             docker_addr = None
             for host in docker_hosts:
                 if host['addr'].split(':')[0] == docker_host or \
-                   host['consul_host'] == docker_host:
+                                host['consul_host'] == docker_host:
                     docker_addr = host['addr']
             if not docker_addr:
                 raise RuntimeError("No such Docker host: '%s'" % docker_host)

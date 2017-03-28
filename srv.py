@@ -344,6 +344,7 @@ class GroupList(Resource):
         parser.add_argument('memsize', type=int, default=500)
         parser.add_argument('password', type=str, default=None)
         parser.add_argument('async', type=bool, default=False)
+        parser.add_argument('appdir', type=str, default=None)
 
         logging.info("Creating instance")
 
@@ -375,13 +376,14 @@ class GroupList(Resource):
         elif args['type'] == 'tarantool':
             create_task = tarantool.CreateTask(group_id)
             TASKS[create_task.task_id] = create_task
-
             gevent.spawn(tarantool.Tarantool.create,
                          create_task,
                          args['name'],
                          args['memsize'],
                          args['password'],
-                         10)
+                         10,
+                         args['appdir']
+                         )
         else:
             raise RuntimeError('No such instance type: %s' % args['type'])
 

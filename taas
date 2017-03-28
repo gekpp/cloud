@@ -575,11 +575,12 @@ def inspect_command(host, group_id_list, auth, cafile):
 
 
 def run_command(host, instance_type,
-                name, memsize, password, auth, cafile, verbose):
+                name, memsize, password, auth, cafile, verbose, appdir):
     args = {'type': instance_type,
             'name': name or '',
             'memsize': memsize,
-            'async': True}
+            'async': True,
+            'appdir': appdir}
 
     if password:
         args['password'] = password
@@ -1275,6 +1276,9 @@ def main():
         nargs='?',
         default=500)
     run_parser.add_argument(
+        '--appdir',
+        help='path to application directory with app.lua on host')
+    run_parser.add_argument(
         '--password',
         help='password for accessing this group')
     run_parser.add_argument(
@@ -1432,7 +1436,7 @@ def main():
     elif args.subparser_name == 'run':
         run_command(host, args.type,
                     args.name, args.memsize, args.password,
-                    auth, cafile, args.verbose)
+                    auth, cafile, args.verbose, args.appdir)
     elif args.subparser_name == 'rm':
         rm_command(host, args.group_id, auth, cafile, args.verbose)
     elif args.subparser_name == 'update':
